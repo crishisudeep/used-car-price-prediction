@@ -7,38 +7,36 @@ Original file is located at
     https://colab.research.google.com/drive/1cN4yXD-CtKN953X_GWfoSktTcc15FFb8
 """
 
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.ensemble import RandomForestRegressor
-from xgboost import XGBRegressor
-sns.set_style("whitegrid")
-
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.metrics import mean_squared_error, r2_score
-
 from sklearn.ensemble import RandomForestRegressor, GradientBoostingRegressor
 from xgboost import XGBRegressor
 
+sns.set_style("whitegrid")
+
+# Load dataset
 df = pd.read_csv("Car details v3.csv")
-df.head()
 
+# Select important columns
 df = df[['year','fuel','transmission','owner','mileage','selling_price']]
-df.head()
 
-df.info()
-
-df.describe()
-
+# Clean mileage column
 df['mileage'] = df['mileage'].str.split().str[0]
 df['mileage'] = df['mileage'].astype(float)
 
+# Remove missing values
+df = df.dropna()
+
+# Create mileage category
 df['mileage_category'] = pd.cut(df['mileage'], bins=3, labels=["Low","Medium","High"])
 
-from sklearn.preprocessing import LabelEncoder
+# Encode categorical variables
 le = LabelEncoder()
 
 df['fuel'] = le.fit_transform(df['fuel'])
@@ -46,46 +44,38 @@ df['transmission'] = le.fit_transform(df['transmission'])
 df['owner'] = le.fit_transform(df['owner'])
 df['mileage_category'] = le.fit_transform(df['mileage_category'])
 
-df.isnull().sum()
-
-df['mileage_category'] = pd.cut(df['mileage'], bins=3, labels=["Low","Medium","High"])
-
-df.dropna(inplace=True)
-
+# Feature engineering
 current_year = 2026
 df['CarAge'] = current_year - df['year']
 df.drop('year', axis=1, inplace=True)
 
+# Split features and target
 X = df.drop("selling_price", axis=1)
 y = df["selling_price"]
 
-from sklearn.model_selection import train_test_split
-
+# Train-test split
 X_train, X_test, y_train, y_test = train_test_split(
     X, y, test_size=0.2, random_state=42
 )
 
+# Train models
 rf = RandomForestRegressor()
 rf.fit(X_train, y_train)
-
-rf_pred = rf.predict(X_test)
-
-from sklearn.ensemble import GradientBoostingRegressor
 
 gb = GradientBoostingRegressor()
 gb.fit(X_train, y_train)
 
-gb_pred = gb.predict(X_test)
-
 xgb = XGBRegressor()
 xgb.fit(X_train, y_train)
 
+# Predictions
+rf_pred = rf.predict(X_test)
+gb_pred = gb.predict(X_test)
 xgb_pred = xgb.predict(X_test)
 
+# Evaluation
 rmse = np.sqrt(mean_squared_error(y_test, rf_pred))
 print("RMSE:", rmse)
-
-from sklearn.metrics import r2_score
 
 rf_r2 = r2_score(y_test, rf_pred)
 gb_r2 = r2_score(y_test, gb_pred)
@@ -98,21 +88,17 @@ results = pd.DataFrame({
 
 print(results)
 
+# Visualization
 plt.figure(figsize=(8,5))
 sns.histplot(df['selling_price'], kde=True)
-
 plt.title("Distribution of Car Selling Prices")
 plt.xlabel("Selling Price")
 plt.ylabel("Frequency")
-
 plt.show()
 
 plt.figure(figsize=(8,5))
 sns.scatterplot(x=df['CarAge'], y=df['selling_price'])
-
 plt.title("Car Age vs Selling Price")
 plt.xlabel("Car Age")
 plt.ylabel("Selling Price")
-
 plt.show()
-
